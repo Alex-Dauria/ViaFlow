@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 via-app/src/serviceAccountKey.json
+
+# Secretos y claves
+serviceAccountKey.json
+.env
+.env.local
+
