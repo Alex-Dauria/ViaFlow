@@ -14,6 +14,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { db } from "../adminScripts/firebaseConfig";
+import Transactions from "./Transactions";
 
 type Wallet = {
   id: string;
@@ -35,31 +36,16 @@ type WalletsProps = {
 };
 
 const ICONS = [
-  "💰", // dinero
-  "🏦", // banco
-  "💳", // tarjeta
-  "👜", // bolso
-  "🚗", // auto
-  "🚑", // ambulancia
-  "🏥", // hospital
-  "🍽️", // comida
-  "🏡", // casa
-  "✈️", // viajes
-  "📦", // logística
-  "📊", // finanzas
-  "🛠️", // herramientas
-  "🧾", // recibos
-  "🧍", // persona
+  "💰", "🏦", "💳", "👜", "🚗", "🚑", "🏥", "🍽️", "🏡", "✈️", "📦", "📊", "🛠️", "🧾", "🧍",
 ];
-
 
 export default function Wallets({ user }: WalletsProps) {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [newWalletName, setNewWalletName] = useState("");
   const [newWalletCurrency, setNewWalletCurrency] = useState("USD");
   const [newWalletIcon, setNewWalletIcon] = useState(ICONS[0]);
-
   const [usersList, setUsersList] = useState<AppUser[]>([]);
+  const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -156,9 +142,10 @@ export default function Wallets({ user }: WalletsProps) {
     walletId: string;
     sharedWith: string[];
     onChange: (uids: string[]) => void;
+    usersList: AppUser[];
   };
 
-  function ShareDropdown({ walletId, sharedWith, onChange }: ShareDropdownProps) {
+  function ShareDropdown({ walletId, sharedWith, onChange, usersList }: ShareDropdownProps) {
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -193,68 +180,33 @@ export default function Wallets({ user }: WalletsProps) {
     return (
       <div
         ref={dropdownRef}
-        style={{
-          position: "relative",
-          userSelect: "none",
-          marginTop: 8,
-          maxWidth: 400,
-        }}
+        className="relative select-none mt-2 max-w-md"
       >
         <div
           onClick={() => setOpen(!open)}
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: 4,
-            cursor: "pointer",
-            backgroundColor: "#fff",
-            fontSize: 14,
-            color: "#222222",
-          }}
+          className="py-2 px-3 border border-gray-600 rounded cursor-pointer bg-gray-700 text-gray-200 text-sm hover:bg-gray-600 transition-colors"
           aria-haspopup="listbox"
           aria-expanded={open}
         >
-          Compartido con: <b>{selectedNames}</b>
-          <span style={{ float: "right" }}>{open ? "▲" : "▼"}</span>
+          Compartido con: <b className="text-white">{selectedNames}</b>
+          <span className="float-right">{open ? "▲" : "▼"}</span>
         </div>
 
         {open && (
           <div
-            style={{
-              position: "absolute",
-              top: "calc(100% + 4px)",
-              left: 0,
-              right: 0,
-              maxHeight: 200,
-              overflowY: "auto",
-              border: "1px solid #ccc",
-              borderRadius: 4,
-              backgroundColor: "#fff",
-              zIndex: 1000,
-              boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-              fontSize: 14,
-              color: "#222222",
-            }}
+            className="absolute top-full mt-1 left-0 right-0 max-h-52 overflow-y-auto border border-gray-600 rounded bg-gray-700 z-50 shadow-xl text-sm"
             role="listbox"
           >
             {usersList.map((user) => (
               <label
                 key={user.uid}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "6px 12px",
-                  cursor: "pointer",
-                  borderBottom: "1px solid #eee",
-                  userSelect: "none",
-                  color: "#222222",
-                }}
+                className="flex items-center py-1.5 px-3 cursor-pointer border-b border-gray-600 select-none hover:bg-gray-600 text-gray-200"
               >
                 <input
                   type="checkbox"
                   checked={sharedWith.includes(user.uid)}
                   onChange={() => toggleUser(user.uid)}
-                  style={{ marginRight: 8 }}
+                  className="mr-2 accent-blue-500"
                 />
                 {user.name || user.email || user.uid}
               </label>
@@ -266,165 +218,98 @@ export default function Wallets({ user }: WalletsProps) {
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 700,
-        margin: "2rem auto",
-        fontFamily: "Arial, sans-serif",
-        color: "#222222",
-      }}
-    >
-      <h2 style={{ marginBottom: 20 }}>
+    <div className="max-w-4xl mx-auto">
+      <h2 className="text-xl font-semibold mb-5 text-white">
         Wallets de {user.displayName || user.email}
       </h2>
 
-      <div style={{ marginBottom: "1rem" }}>
-        <input
-          placeholder="Nombre de nueva wallet"
-          value={newWalletName}
-          onChange={(e) => setNewWalletName(e.target.value)}
-          style={{
-            marginRight: 8,
-            padding: 6,
-            fontSize: 14,
-            borderRadius: 4,
-            border: "1px solid #ccc",
-            width: 200,
-            color: "#222222",
-          }}
-        />
-        <select
-          value={newWalletCurrency}
-          onChange={(e) => setNewWalletCurrency(e.target.value)}
-          style={{
-            marginRight: 8,
-            padding: 6,
-            fontSize: 14,
-            borderRadius: 4,
-            border: "1px solid #ccc",
-            color: "#222222",
-          }}
-        >
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-          <option value="ARS">ARS</option>
-          <option value="CHF">CHF</option>
-        </select>
+      <div className="flex flex-wrap gap-4 mb-6 items-end">
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-300">Nombre</label>
+          <input
+            placeholder="Nombre de nueva wallet"
+            value={newWalletName}
+            onChange={(e) => setNewWalletName(e.target.value)}
+            className="p-2 border border-gray-600 rounded text-sm w-48 bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-300">Moneda</label>
+          <select
+            value={newWalletCurrency}
+            onChange={(e) => setNewWalletCurrency(e.target.value)}
+            className="p-2 border border-gray-600 rounded text-sm bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="USD" className="bg-gray-700">USD</option>
+            <option value="EUR" className="bg-gray-700">EUR</option>
+            <option value="ARS" className="bg-gray-700">ARS</option>
+            <option value="CHF" className="bg-gray-700">CHF</option>
+          </select>
+        </div>
 
-        {/* Selector íconos */}
-        <select
-          value={newWalletIcon}
-          onChange={(e) => setNewWalletIcon(e.target.value)}
-          style={{
-            marginRight: 8,
-            padding: 6,
-            fontSize: 18,
-            borderRadius: 4,
-            border: "1px solid #ccc",
-            color: "#222222",
-            width: 60,
-            textAlign: "center",
-            cursor: "pointer",
-            backgroundColor: "#fff",
-          }}
-        >
-          {ICONS.map((icon) => (
-            <option key={icon} value={icon}>
-              {icon}
-            </option>
-          ))}
-        </select>
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-300">Ícono</label>
+          <select
+            value={newWalletIcon}
+            onChange={(e) => setNewWalletIcon(e.target.value)}
+            className="p-1 border border-gray-600 rounded text-lg w-14 text-center cursor-pointer bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            {ICONS.map((icon) => (
+              <option key={icon} value={icon} className="bg-gray-700">
+                {icon}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <button
           onClick={handleCreateWallet}
-          style={{
-            padding: "7px 15px",
-            fontSize: 14,
-            borderRadius: 4,
-            border: "none",
-            cursor: "pointer",
-            backgroundColor: "#007bff",
-            color: "white",
-          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
         >
           Crear Wallet
         </button>
       </div>
 
-      <ul style={{ listStyle: "none", padding: 0 }}>
+      <ul className="space-y-3">
         {wallets.map((w) => (
           <li
             key={w.id}
-            style={{
-              marginBottom: 12,
-              padding: 12,
-              border: "1px solid #ddd",
-              borderRadius: 6,
-              backgroundColor: "#f9f9f9",
-            }}
+            className="p-4 border border-gray-700 rounded-lg bg-gray-800 shadow-lg"
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                marginBottom: 6,
-              }}
-            >
-              <span style={{ fontSize: 24 }}>{w.icon}</span>
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <span 
+                className="text-2xl cursor-pointer hover:scale-110 transition-transform"
+                onClick={() => setSelectedWalletId(w.id === selectedWalletId ? null : w.id)}
+                title={w.id === selectedWalletId ? "Ocultar transacciones" : "Ver transacciones"}
+              >
+                {w.icon}
+              </span>
+              
               <input
                 value={w.name}
-                onChange={(e) =>
-                  handleUpdateWallet(w.id, "name", e.target.value)
-                }
-                style={{
-                  fontSize: 16,
-                  padding: 6,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                  flexGrow: 1,
-                  color: "#222222",
-                }}
+                onChange={(e) => handleUpdateWallet(w.id, "name", e.target.value)}
+                className="p-2 border border-gray-600 rounded text-base flex-grow min-w-[150px] bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+              
               <select
                 value={w.currency}
-                onChange={(e) =>
-                  handleUpdateWallet(w.id, "currency", e.target.value)
-                }
-                style={{
-                  marginLeft: 10,
-                  padding: 6,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                  color: "#222222",
-                }}
+                onChange={(e) => handleUpdateWallet(w.id, "currency", e.target.value)}
+                className="p-2 border border-gray-600 rounded text-sm bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="ARS">ARS</option>
-                <option value="CHF">CHF</option>
+                <option value="USD" className="bg-gray-700">USD</option>
+                <option value="EUR" className="bg-gray-700">EUR</option>
+                <option value="ARS" className="bg-gray-700">ARS</option>
+                <option value="CHF" className="bg-gray-700">CHF</option>
               </select>
 
               <select
                 value={w.icon}
-                onChange={(e) =>
-                  handleUpdateWallet(w.id, "icon", e.target.value)
-                }
-                style={{
-                  marginLeft: 10,
-                  padding: 6,
-                  fontSize: 18,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                  width: 60,
-                  textAlign: "center",
-                  cursor: "pointer",
-                  backgroundColor: "#fff",
-                  color: "#222222",
-                }}
+                onChange={(e) => handleUpdateWallet(w.id, "icon", e.target.value)}
+                className="p-1 border border-gray-600 rounded text-lg w-14 text-center cursor-pointer bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {ICONS.map((icon) => (
-                  <option key={icon} value={icon}>
+                  <option key={icon} value={icon} className="bg-gray-700">
                     {icon}
                   </option>
                 ))}
@@ -432,15 +317,7 @@ export default function Wallets({ user }: WalletsProps) {
 
               <button
                 onClick={() => handleDeleteWallet(w.id, w.createdBy)}
-                style={{
-                  marginLeft: 12,
-                  padding: "6px 12px",
-                  backgroundColor: "#dc3545",
-                  border: "none",
-                  borderRadius: 4,
-                  color: "white",
-                  cursor: "pointer",
-                }}
+                className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
               >
                 Borrar
               </button>
@@ -450,7 +327,20 @@ export default function Wallets({ user }: WalletsProps) {
               walletId={w.id}
               sharedWith={w.sharedWith}
               onChange={(uids) => handleUpdateWallet(w.id, "sharedWith", uids)}
+              usersList={usersList}
             />
+
+            {w.id === selectedWalletId && (
+              <div className="mt-4">
+                <Transactions 
+                  walletId={w.id} 
+                  user={user} 
+                  defaultCurrency={w.currency}
+                  sharedWith={w.sharedWith}
+                  usersList={usersList}
+                />
+              </div>
+            )}
           </li>
         ))}
       </ul>
