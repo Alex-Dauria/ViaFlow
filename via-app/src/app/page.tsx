@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Login from "../components/Login";
 import { auth } from "../adminScripts/firebaseConfig";
 import type { User } from "firebase/auth";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import Wallets from "../components/Wallets";
 
 export default function Home() {
@@ -43,9 +43,24 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-900 p-4 text-gray-100">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6 text-white">
-          Bienvenido, {user.displayName || user.email}!
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-white">
+            Bienvenido, {user.displayName || user.email}!
+          </h1>
+          <button
+            onClick={async () => {
+              try {
+                await signOut(auth);
+                alert("Logout exitoso");
+              } catch (error) {
+                alert("Error en logout: " + error);
+              }
+            }}
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+          >
+            Cerrar sesión
+          </button>
+        </div>
         <Wallets user={user} />
       </div>
     </div>

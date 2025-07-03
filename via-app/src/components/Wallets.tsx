@@ -12,6 +12,8 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  serverTimestamp,
+  orderBy
 } from "firebase/firestore";
 import { db } from "../adminScripts/firebaseConfig";
 import Transactions from "./Transactions";
@@ -23,6 +25,7 @@ type Wallet = {
   icon: string;
   createdBy: string;
   sharedWith: string[];
+  isShared: boolean; // Nuevo campo para controlar si es wallet compartida
 };
 
 type AppUser = {
@@ -46,19 +49,30 @@ export default function Wallets({ user }: WalletsProps) {
   const [newWalletIcon, setNewWalletIcon] = useState(ICONS[0]);
   const [usersList, setUsersList] = useState<AppUser[]>([]);
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
+  const [newWalletIsShared, setNewWalletIsShared] = useState(false); // Estado para el checkbox
 
   useEffect(() => {
     if (!user) return;
 
     const q = query(
       collection(db, "wallets"),
-      where("sharedWith", "array-contains", user.uid)
+      where("sharedWith", "array-contains", user.uid),
+      orderBy("createdAt", "desc") // Ordenar por fecha de creación
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: Wallet[] = [];
       snapshot.forEach((doc) => {
-        data.push({ id: doc.id, ...doc.data() } as Wallet);
+        const walletData = doc.data();
+        data.push({ 
+          id: doc.id, 
+          name: walletData.name,
+          currency: walletData.currency,
+          icon: walletData.icon,
+          createdBy: walletData.createdBy,
+          sharedWith: walletData.sharedWith,
+          isShared: walletData.isShared || false // Por defecto false si no existe
+        } as Wallet);
       });
       setWallets(data);
     });
@@ -98,10 +112,13 @@ export default function Wallets({ user }: WalletsProps) {
         icon: newWalletIcon,
         createdBy: user.uid,
         sharedWith: [user.uid],
+        isShared: newWalletIsShared, // Guardar el estado del checkbox
+        createdAt: serverTimestamp() // Agregar timestamp para ordenar
       });
       setNewWalletName("");
       setNewWalletCurrency("USD");
       setNewWalletIcon(ICONS[0]);
+      setNewWalletIsShared(false); // Resetear a false
     } catch (error) {
       alert("Error creando wallet: " + error);
     }
@@ -109,7 +126,7 @@ export default function Wallets({ user }: WalletsProps) {
 
   async function handleUpdateWallet(
     id: string,
-    field: "name" | "currency" | "sharedWith" | "icon",
+    field: "name" | "currency" | "sharedWith" | "icon" | "isShared", // Agregar "isShared"
     value: any
   ) {
     if ((field === "name" || field === "icon") && !value.trim()) {
@@ -263,6 +280,20 @@ export default function Wallets({ user }: WalletsProps) {
           </select>
         </div>
 
+        {/* Checkbox para wallet compartida */}
+        <div className="flex items-center">
+          <input
+            id="shared-wallet-checkbox"
+            type="checkbox"
+            checked={newWalletIsShared}
+            onChange={(e) => setNewWalletIsShared(e.target.checked)}
+            className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600"
+          />
+          <label htmlFor="shared-wallet-checkbox" className="ml-2 text-sm text-gray-300">
+            Wallet compartida
+          </label>
+        </div>
+
         <button
           onClick={handleCreateWallet}
           className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
@@ -315,6 +346,20 @@ export default function Wallets({ user }: WalletsProps) {
                 ))}
               </select>
 
+              {/* Checkbox para actualizar si es compartida */}
+              <div className="flex items-center">
+                <input
+                  id={`shared-wallet-${w.id}`}
+                  type="checkbox"
+                  checked={w.isShared}
+                  onChange={(e) => handleUpdateWallet(w.id, "isShared", e.target.checked)}
+                  className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600"
+                />
+                <label htmlFor={`shared-wallet-${w.id}`} className="ml-2 text-sm text-gray-300">
+                  Compartida
+                </label>
+              </div>
+
               <button
                 onClick={() => handleDeleteWallet(w.id, w.createdBy)}
                 className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
@@ -338,6 +383,7 @@ export default function Wallets({ user }: WalletsProps) {
                   defaultCurrency={w.currency}
                   sharedWith={w.sharedWith}
                   usersList={usersList}
+                  isSharedWallet={w.isShared} // Pasamos la propiedad
                 />
               </div>
             )}

@@ -1,25 +1,22 @@
-"use client"; // Esto es clave para Next.js 13+
+"use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { auth } from "../adminScripts/firebaseConfig";
 import {
   GoogleAuthProvider,
   signInWithPopup,
-  signOut,
   onAuthStateChanged,
   User,
 } from "firebase/auth";
 
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { getFirestore } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, getFirestore } from "firebase/firestore";
+import { FcGoogle } from "react-icons/fc";
 
 const provider = new GoogleAuthProvider();
-const firestore = getFirestore(); // Ajusta si tu import está distinto
+const firestore = getFirestore();
 
 export default function Login() {
-  const [user, setUser] = useState<User | null>(null);
-
-  // Función para chequear y crear usuario en Firestore si no existe
+  // Crea usuario en Firestore si no existe
   async function checkAndCreateUserInFirestore(currentUser: User) {
     try {
       const userDocRef = doc(firestore, "users", currentUser.uid);
@@ -35,30 +32,24 @@ export default function Login() {
           photoURL: currentUser.photoURL || "",
           wallets: [],
         });
-        console.log("Usuario creado en Firestore con rol 'user'");
+        console.log("Usuario creado en Firestore");
       } else {
-        // Actualizamos lastLogin cada vez que el usuario vuelve a loguearse
-        await setDoc(
-          userDocRef,
-          { lastLogin: serverTimestamp() },
-          { merge: true }
-        );
+        await setDoc(userDocRef, { lastLogin: serverTimestamp() }, { merge: true });
         console.log("Usuario ya existe, lastLogin actualizado");
       }
     } catch (error) {
-      console.error("Error verificando/creando usuario en Firestore:", error);
+      console.error("Error creando/verificando usuario:", error);
     }
   }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
       if (currentUser) {
         await checkAndCreateUserInFirestore(currentUser);
       }
     });
 
-    return () => unsubscribe(); // Limpia el listener al desmontar
+    return () => unsubscribe();
   }, []);
 
   const handleLogin = async () => {
@@ -70,27 +61,15 @@ export default function Login() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      alert("Logout exitoso");
-    } catch (error) {
-      alert("Error en logout: " + error);
-    }
-  };
-
-  if (user) {
-    return (
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
-        <p>¡Hola, {user.displayName || user.email}!</p>
-        <button onClick={handleLogout}>Logout</button>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ textAlign: "center", marginTop: "2rem" }}>
-      <button onClick={handleLogin}>Login con Google</button>
+    <div className="flex justify-center mt-4">
+      <button
+        onClick={handleLogin}
+        className="flex items-center gap-3 px-6 py-3 bg-white text-gray-800 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition duration-200 ease-in-out cursor-pointer"
+      >
+        <FcGoogle size={24} />
+        <span className="font-medium text-base">Iniciar sesión con Google</span>
+      </button>
     </div>
   );
 }
